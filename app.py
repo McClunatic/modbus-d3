@@ -19,9 +19,9 @@ app = FastAPI()
 app_log = logging.getLogger('modbus.d3.app')
 app_log.setLevel('INFO')
 sh = logging.StreamHandler()
-fmt = logging.Formatter('%(asctime)s,%(levelname)s,%(message)s')
+fmt = '%(asctime)s,%(levelname)s,%(message)s'
 datefmt = '%H:%M:%S'
-sh.setFormatter(fmt=fmt, datefmt=datefmt)
+sh.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
 
 
 # Helper
