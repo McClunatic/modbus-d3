@@ -1,6 +1,7 @@
 """FastAPI server app with embedded Modbus client."""
 
 import asyncio
+import datetime
 import logging
 
 from typing import Tuple
@@ -93,7 +94,9 @@ def get_file_logger() -> logging.Logger:
     if len(app_log.handlers) > 1:
         return app_log
 
-    fh = logging.FileHandler()
+    now = datetime.datetime.now()
+    filename = now.strftime('%Y.%m.%d.%H.%M.%S') + '.log'
+    fh = logging.FileHandler(filename)
     fh.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
     app_log.addHandler(fh)
     return app_log
@@ -170,9 +173,9 @@ async def get_data(
     return {'x': epoch_time, 'y': epoch_sin}
 
 
-@app.get("/stop")
-def stop_log(log=Depends(drop_file_logger)):
-    """Gets Modbus data using `client`.
+@app.get("/reset")
+def reset_log(log=Depends(drop_file_logger)):
+    """Reset app log for new file handler at next '/' GET.
 
     Args:
         log: Logger stripped of file loggers to prevent file logging.
