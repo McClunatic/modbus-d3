@@ -28,11 +28,12 @@ app.add_middleware(
 
 #: Application log
 app_log = logging.getLogger('modbus.d3.app')
-app_log.setLevel('INFO')
 sh = logging.StreamHandler()
+sh.setLevel('INFO')
 fmt = '%(asctime)s,%(levelname)s,%(message)s'
 datefmt = '%H:%M:%S'
 sh.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
+app_log.addHandler(sh)
 
 
 # Helper
@@ -108,6 +109,7 @@ def get_file_logger() -> logging.Logger:
     now = datetime.datetime.now()
     filename = now.strftime('%Y.%m.%d.%H.%M.%S') + '.log'
     fh = logging.FileHandler(filename)
+    fh.setLevel('INFO')
     fh.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
     app_log.addHandler(fh)
     return app_log
@@ -123,7 +125,9 @@ def drop_file_logger() -> logging.Logger:
     if len(app_log.handlers) == 1:
         return
 
-    shs = [h for h in app_log.handlers if isinstance(h, logging.StreamHandler)]
+    shs = [
+        h for h in app_log.handlers
+        if not isinstance(h, logging.FileHandler)]
     app_log.handlers = shs
     return app_log
 
