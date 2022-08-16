@@ -53,7 +53,7 @@ export function streamingChart(config?: Config) {
       let gEnter = d3.select(this).selectAll("svg")
           .data([data])
           .enter()
-        .append("svg")
+        .insert("svg", ":nth-child(2)")
         .append("g")
       gEnter
         .append("g")

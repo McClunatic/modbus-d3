@@ -1,5 +1,4 @@
 import './style.css'
-import typescriptLogo from './typescript.svg'
 import { Config, streamingChart } from './chart'
 
 import * as d3 from 'd3'
@@ -11,12 +10,6 @@ interface Response {
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
-    </a>
     <h1>Vite + TypeScript</h1>
     <div class="card">
       <button id="start" type="button">Start</button>
@@ -62,7 +55,7 @@ while (true) {
     document.getElementById("latest")!.textContent =
       `${data_point[0].toLocaleTimeString()}: ${s}${data_point[1].toFixed(2)}`
     if (plot_data.length > 50) plot_data.shift()
-    d3.select("#app")
+    d3.select("#app > div")
       .data([plot_data])
       .call(chart)
   }
