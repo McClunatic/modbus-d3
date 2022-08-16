@@ -40,8 +40,9 @@ document.getElementById("stop")!.addEventListener("click", () => {
   running = false
 })
 
-document.getElementById("reset")!.addEventListener("click", () => {
+document.getElementById("reset")!.addEventListener("click", async () => {
   plot_data = []
+  await fetch('http://localhost:8000/reset')
 })
 
 let duration = 200
