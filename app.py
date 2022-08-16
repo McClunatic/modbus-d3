@@ -3,6 +3,7 @@
 import asyncio
 import datetime
 import logging
+import sys
 
 from typing import Tuple
 
@@ -12,6 +13,10 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pymodbus.client.asynchronous.tcp import AsyncModbusTCPClient
 from pymodbus.client.asynchronous import schedulers
+
+# Fix Windows RuntimeError: Event loop is closed on KeyboardInterrupt
+if sys.platform.startswith('win'):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 #: FastAPI application
 app = FastAPI()
