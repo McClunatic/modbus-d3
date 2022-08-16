@@ -65,7 +65,7 @@ export function streamingChart(config?: Config) {
           .attr("x", (width - margin.left - margin.right) / 2)
           .attr("y", height - margin.bottom / 2)
           .attr("text-anchor", "start")
-          .attr("fill", "black")
+          .attr("fill", "#888")
           .text(xlabel)
       gEnter
         .append("g")
@@ -76,7 +76,7 @@ export function streamingChart(config?: Config) {
           .attr("x", -(height - margin.top - margin.bottom) / 2)
           .attr("y", -margin.left / 2)
           .attr("text-anchor", "start")
-          .attr("fill", "black")
+          .attr("fill", "#888")
           .attr("transform", "rotate(-90)")
           .text(ylabel)
       gEnter
