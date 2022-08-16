@@ -54,6 +54,7 @@ export function streamingChart(config?: Config) {
           .data([data])
           .enter()
         .insert("svg", ":nth-child(2)")
+          .attr("preserveAspectRatio", "xMidYMid meet")
         .append("g")
       gEnter
         .append("g")
