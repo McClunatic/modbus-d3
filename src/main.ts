@@ -64,7 +64,7 @@ if (window.Worker) {
   })
 
   document.getElementById("stop")!.addEventListener("click", () => {
-    worker.postMessage({running: true, duration: duration})
+    worker.postMessage({running: false, duration: duration})
   })
 
   document.getElementById("reset")!.addEventListener("click", async () => {
