@@ -22,7 +22,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   </div>
 `
 
-let running = false;
 let plot_data: Array<[Date, number]> = []
 
 let duration = 200
@@ -55,26 +54,34 @@ function updateChart(data: Response) {
 //   updateChart(data)
 // }
 
-document.getElementById("start")!.addEventListener("click", () => {
-  running = true
-})
+if (window.Worker) {
+  const worker = new Worker(new URL('./worker.js', import.meta.url))
+  worker.onmessage = event => {
+    updateChart(event.data)
+  }
+  document.getElementById("start")!.addEventListener("click", () => {
+    worker.postMessage({running: true, duration: duration})
+  })
 
-document.getElementById("stop")!.addEventListener("click", () => {
-  running = false
-})
+  document.getElementById("stop")!.addEventListener("click", () => {
+    worker.postMessage({running: true, duration: duration})
+  })
 
-document.getElementById("reset")!.addEventListener("click", async () => {
-  plot_data = []
-  // ws.send(JSON.stringify({method: 'reset'}))
-  await fetch('http://localhost:8000/reset')
-})
-
-function updateInterval() {
-  if (!running)
-    return
-  fetch('http://localhost:8000/')
-    .then(response => response.json())
-    .then(data => updateChart(data))
+  document.getElementById("reset")!.addEventListener("click", async () => {
+    plot_data = []
+    // ws.send(JSON.stringify({method: 'reset'}))
+    await fetch('http://localhost:8000/reset')
+  })
+} else {
+  console.log('Browser does not support web workers!')
 }
 
-setInterval(updateInterval, duration)
+// function updateInterval() {
+//   if (!running)
+//     return
+//   fetch('http://localhost:8000/')
+//     .then(response => response.json())
+//     .then(data => updateChart(data))
+// }
+
+// setInterval(updateInterval, duration)
