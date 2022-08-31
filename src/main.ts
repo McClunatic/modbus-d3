@@ -25,6 +25,36 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 let running = false;
 let plot_data: Array<[Date, number]> = []
 
+let duration = 200
+let chart = streamingChart(({
+  duration,
+  xlabel: "t",
+  ylabel: "sin(t)",
+} as Config))
+
+function updateChart(data: Response) {
+  let data_point: [Date, number] = [new Date(data.x * 1000), data.y]
+  plot_data.push(data_point)
+  let s = data_point[1] < 0 ? '' : '+'
+  let latest =
+    `${data_point[0].toLocaleTimeString()}: ${s}${data_point[1].toFixed(2)}`
+  document.getElementById("latest")!.textContent = latest
+  document.title = latest
+  if (plot_data.length > 50) plot_data.shift()
+  d3.select("#app > div")
+    .data([plot_data])
+    .call(chart)
+}
+
+// let ws = new WebSocket('ws://localhost:8000/ws')
+
+// ws.onmessage = (event) => {
+//   let data = JSON.parse(event.data)
+//   if (Object.keys(data).length === 0)
+//     return
+//   updateChart(data)
+// }
+
 document.getElementById("start")!.addEventListener("click", () => {
   running = true
 })
@@ -35,29 +65,16 @@ document.getElementById("stop")!.addEventListener("click", () => {
 
 document.getElementById("reset")!.addEventListener("click", async () => {
   plot_data = []
+  // ws.send(JSON.stringify({method: 'reset'}))
   await fetch('http://localhost:8000/reset')
 })
 
-let duration = 200
-let chart = streamingChart(({
-  duration,
-  xlabel: "t",
-  ylabel: "sin(t)",
-} as Config))
-
-while (true) {
-  if (running) {
-    let response = await fetch('http://localhost:8000/')
-    let data: Response = await response.json()
-    let data_point: [Date, number] = [new Date(data.x * 1000), data.y]
-    plot_data.push(data_point)
-    let s = data_point[1] < 0 ? '' : '+'
-    document.getElementById("latest")!.textContent =
-      `${data_point[0].toLocaleTimeString()}: ${s}${data_point[1].toFixed(2)}`
-    if (plot_data.length > 50) plot_data.shift()
-    d3.select("#app > div")
-      .data([plot_data])
-      .call(chart)
-  }
-  await new Promise(r => setTimeout(r, duration))
+function updateInterval() {
+  if (!running)
+    return
+  fetch('http://localhost:8000/')
+    .then(response => response.json())
+    .then(data => updateChart(data))
 }
+
+setInterval(updateInterval, duration)

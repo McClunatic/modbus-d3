@@ -4,12 +4,13 @@ import asyncio
 import datetime
 import logging
 import sys
+import time
 
 from typing import Tuple
 
 import numpy as np
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pymodbus.client.asynchronous.tcp import AsyncModbusTCPClient
 from pymodbus.client.asynchronous import schedulers
@@ -33,8 +34,8 @@ app.add_middleware(
 
 #: Application log
 app_log = logging.getLogger('modbus.d3.app')
+app_log.setLevel(logging.INFO)
 sh = logging.StreamHandler()
-sh.setLevel('INFO')
 fmt = '%(asctime)s,%(levelname)s,%(message)s'
 datefmt = '%H:%M:%S'
 sh.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
@@ -75,29 +76,16 @@ async def read_coils(client: AsyncModbusTCPClient) -> Tuple[float, float]:
         Tuple of `(epoch_time, sin(epoch_time))`.`
     """
 
-    try:
-        # Read coils for time bits
-        rrt = await client.protocol.read_coils(0, 64)
-        time_bits = rrt.bits
+    # Read coils for time bits
+    rrt = await client.protocol.read_coils(0, 64)
+    time_bits = rrt.bits
 
-        # Read coils for sin(t) bits
-        rrs = await client.protocol.read_coils(64, 32)
-        sin_bits = rrs.bits
+    # Read coils for sin(t) bits
+    rrs = await client.protocol.read_coils(64, 32)
+    sin_bits = rrs.bits
 
-        epoch_time, sin = convert_bits(time_bits, sin_bits)
-        return epoch_time, sin
-        # log.debug('time: %s\tsin(t): %.6f', dtime, sin)
-    except AttributeError as exc:
-        assert exc.args[0] in [
-            "'NoneType' object has no attribute 'write'",
-            "'NoneType' object has no attribute 'read_coils'",
-        ]
-        # log.debug('AttributeError, rebuilding client and retrying...')
-        client = await get_client()
-        await asyncio.sleep(1)
-    except asyncio.TimeoutError:
-        # log.debug('TimeoutError, retrying...')
-        await asyncio.sleep(1)
+    epoch_time, sin = convert_bits(time_bits, sin_bits)
+    return epoch_time, sin
 
 
 # Dependency
@@ -114,7 +102,6 @@ def get_file_logger() -> logging.Logger:
     now = datetime.datetime.now()
     filename = now.strftime('%Y.%m.%d.%H.%M.%S') + '.log'
     fh = logging.FileHandler(filename)
-    fh.setLevel('INFO')
     fh.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
     app_log.addHandler(fh)
     return app_log
@@ -157,9 +144,26 @@ async def get_client() -> AsyncModbusTCPClient:
 
 
 @app.get("/")
-async def get_data(
+async def get(
     client=Depends(get_client),
     log=Depends(get_file_logger),
+):
+    """Gets Modbus data using `client`.
+
+    Args:
+        client: Connected Modbus client object.
+        log: Logger to support recording data.
+
+    Returns:
+        * x : The epoch time
+        * y : The sin(epoch time)
+    """
+    return await get_data(client, log)
+
+
+async def get_data(
+    client: AsyncModbusTCPClient,
+    log: logging.Logger,
 ):
     """Gets Modbus data using `client`.
 
@@ -174,6 +178,7 @@ async def get_data(
 
     try:
         epoch_time, epoch_sin = await read_coils(client)
+        log.info('%s,%s', epoch_time, epoch_sin)
     except AttributeError as exc:
         assert exc.args[0] in [
             "'NoneType' object has no attribute 'write'",
@@ -205,3 +210,24 @@ def reset_log(log=Depends(drop_file_logger)):
     """
 
     return {}
+
+@app.websocket('/ws')
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    client = await get_client()
+    log = get_file_logger()
+    while True:
+        data = await websocket.receive_json()
+        if data['method'] == 'get':
+            try:
+                resp = await get_data(client, log)
+            except HTTPException:
+                resp = {'x': time.time(), 'y': 0, 'e': 1}
+            await websocket.send_json(resp)
+        elif data['method'] == 'reset':
+            drop_file_logger()
+            log = get_file_logger()
+            await websocket.send_json({})
+        elif data['method'] == 'close':
+            break
+    await websocket.close()
